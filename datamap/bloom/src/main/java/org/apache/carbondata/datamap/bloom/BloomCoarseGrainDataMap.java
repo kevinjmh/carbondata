@@ -142,7 +142,7 @@ public class BloomCoarseGrainDataMap extends CoarseGrainDataMap {
 
   @Override
   public List<Blocklet> prune(FilterResolverIntf filterExp, SegmentProperties segmentProperties,
-      List<PartitionSpec> partitions) throws IOException {
+      List<PartitionSpec> partitions) throws IOException, UnsupportedOperationException {
     Set<Blocklet> hitBlocklets = new HashSet<>();
     if (filterExp == null) {
       // null is different from empty here. Empty means after pruning, no blocklet need to scan.
@@ -155,6 +155,10 @@ public class BloomCoarseGrainDataMap extends CoarseGrainDataMap {
     } catch (DictionaryGenerationException | UnsupportedEncodingException e) {
       LOGGER.error(e, "Exception occurs while creating query model");
       throw new RuntimeException(e);
+    } catch (UnsupportedOperationException e) {
+      // Bloom filter get error because filter is not applied on column directly.
+      LOGGER.error(e.getMessage());
+      throw e;
     }
     for (BloomQueryModel bloomQueryModel : bloomQueryModels) {
       LOGGER.debug("prune blocklet for query: " + bloomQueryModel);
@@ -179,7 +183,8 @@ public class BloomCoarseGrainDataMap extends CoarseGrainDataMap {
   }
 
   private List<BloomQueryModel> createQueryModel(Expression expression)
-      throws DictionaryGenerationException, UnsupportedEncodingException {
+      throws DictionaryGenerationException, UnsupportedEncodingException,
+      UnsupportedOperationException {
     List<BloomQueryModel> queryModels = new ArrayList<BloomQueryModel>();
     // bloomdatamap only support equalTo and In operators now
     if (expression instanceof EqualToExpression) {
@@ -203,7 +208,8 @@ public class BloomCoarseGrainDataMap extends CoarseGrainDataMap {
         }
         return queryModels;
       } else {
-        LOGGER.warn("BloomFilter can only support the 'equal' filter like 'Col = PlainValue'");
+        throw new UnsupportedOperationException(
+            "BloomFilter can only support the 'equal' filter like 'Col = PlainValue'");
       }
     } else if (expression instanceof InExpression) {
       Expression left = ((InExpression) expression).getLeft();
@@ -226,7 +232,8 @@ public class BloomCoarseGrainDataMap extends CoarseGrainDataMap {
         }
         return queryModels;
       } else {
-        LOGGER.warn("BloomFilter can only support the 'in' filter like 'Col in (PlainValues)'");
+        throw new UnsupportedOperationException(
+            "BloomFilter can only support the 'in' filter like 'Col in (PlainValues)'");
       }
     }
 

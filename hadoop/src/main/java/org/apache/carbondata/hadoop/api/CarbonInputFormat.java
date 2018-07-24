@@ -460,13 +460,16 @@ m filterExpression
       } else {
         cgPrunedBlocklets = cgDataMapExprWrapper.prune(segmentIds, partitionsToPrune);
       }
-      // since index datamap prune in segment scope,
-      // the result need to intersect with previous pruned result
-      prunedBlocklets = (List) CollectionUtils.intersection(
-          cgPrunedBlocklets, prunedBlocklets);
-      ExplainCollector.recordCGDataMapPruning(
-          DataMapWrapperSimpleInfo.fromDataMapWrapper(cgDataMapExprWrapper),
-          prunedBlocklets.size());
+      // null is returned if pruning failed
+      if (null != cgPrunedBlocklets) {
+        // since index datamap prune in segment scope,
+        // the result need to intersect with previous pruned result
+        prunedBlocklets = (List) CollectionUtils.intersection(
+            cgPrunedBlocklets, prunedBlocklets);
+        ExplainCollector.recordCGDataMapPruning(
+            DataMapWrapperSimpleInfo.fromDataMapWrapper(cgDataMapExprWrapper),
+            prunedBlocklets.size());
+      }
     }
 
     if (prunedBlocklets.size() == 0) {

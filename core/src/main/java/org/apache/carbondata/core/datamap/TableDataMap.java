@@ -97,8 +97,14 @@ public final class TableDataMap extends OperationEventListener {
       } else {
         List<DataMap> dataMaps = dataMapFactory.getDataMaps(segment);
         segmentProperties = segmentPropertiesFetcher.getSegmentProperties(segment);
-        for (DataMap dataMap : dataMaps) {
-          pruneBlocklets.addAll(dataMap.prune(filterExp, segmentProperties, partitions));
+        try {
+          for (DataMap dataMap : dataMaps) {
+            pruneBlocklets.addAll(dataMap.prune(filterExp, segmentProperties, partitions));
+          }
+        } catch (UnsupportedOperationException e) {
+          // if any datamap failed when pruning, we should return all blocklets
+          // instead of add nothing to `pruneBlocklets` which acts like all blocklets are pruned.
+          pruneBlocklets = blockletDetailsFetcher.getAllBlocklets(segment, partitions);
         }
       }
       blocklets.addAll(addSegmentId(

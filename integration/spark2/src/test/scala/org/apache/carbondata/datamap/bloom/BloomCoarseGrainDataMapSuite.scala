@@ -532,6 +532,48 @@ class BloomCoarseGrainDataMapSuite extends QueryTest with BeforeAndAfterAll with
       sql(s"select * from $normalTable where c1 = 'c1v12'"))
   }
 
+
+  test("test bloom datamap: query not directly hits index column") {
+    sql(
+      s"""
+         | CREATE TABLE $normalTable(c1 string, c2 int, c3 string)
+         | STORED BY 'carbondata'
+         | """.stripMargin)
+    sql(
+      s"""
+         | CREATE TABLE $bloomDMSampleTable(c1 string, c2 int, c3 string)
+         | STORED BY 'carbondata'
+         | """.stripMargin)
+    sql(
+      s"""
+         | CREATE DATAMAP $dataMapName on table $bloomDMSampleTable
+         | using 'bloomfilter'
+         | DMPROPERTIES('index_columns'='c1, c2')
+         | """.stripMargin)
+    sql(
+      s"""
+         | INSERT INTO $bloomDMSampleTable
+         | values ('1', 11, 'c3v11'), ('2', 12, 'c3v12')
+         | """.stripMargin)
+    sql(
+      s"""
+         | INSERT INTO $normalTable
+         | values ('1', 11, 'c3v11'), ('2', 12, 'c3v12')
+         | """.stripMargin)
+
+    // spark casts value in carbon as Int to compare with filter value 1
+    checkAnswer(sql(s"select * from $bloomDMSampleTable where c1 = 1"),
+      sql(s"select * from $normalTable where c1 = 1"))
+
+    // spark converts '12' as Int. Makes this a normal query
+    checkAnswer(sql(s"select * from $bloomDMSampleTable where c2 = '12'"),
+      sql(s"select * from $normalTable where c2 = '12'"))
+
+    // does not take as filter expression
+    checkAnswer(sql(s"select * from $bloomDMSampleTable where length(c1) = 1"),
+      sql(s"select * from $normalTable where length(c1) = 1"))
+  }
+
   test("test create bloomfilter datamap which index column datatype is complex ") {
     sql(
       s"""
