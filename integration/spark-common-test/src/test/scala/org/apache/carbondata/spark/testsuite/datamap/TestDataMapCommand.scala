@@ -229,9 +229,9 @@ class TestDataMapCommand extends QueryTest with BeforeAndAfterAll {
        """.stripMargin)
     var result = sql(s"show datamap on table $tableName").cache()
     checkAnswer(sql(s"show datamap on table $tableName"),
-      Seq(Row(datamapName, "bloomfilter", s"default.$tableName", "'bloom_fpp'='0.001', 'bloom_size'='32000', 'index_columns'='a'", "ENABLED", "NA"),
-        Row(datamapName2, "bloomfilter", s"default.$tableName", "'index_columns'='b'","ENABLED", "NA"),
-        Row(datamapName3, "bloomfilter", s"default.$tableName", "'index_columns'='c'", "ENABLED", "NA")))
+      Seq(Row(datamapName, "bloomfilter", s"default.$tableName", "'bloom_fpp'='0.001', 'bloom_size'='32000', 'index_columns'='a'", "ENABLED", "NA", null),
+        Row(datamapName2, "bloomfilter", s"default.$tableName", "'index_columns'='b'","ENABLED", "NA", null),
+        Row(datamapName3, "bloomfilter", s"default.$tableName", "'index_columns'='c'", "ENABLED", "NA", null)))
     result.unpersist()
     sql(s"drop table if exists $tableName")
 
@@ -248,7 +248,7 @@ class TestDataMapCommand extends QueryTest with BeforeAndAfterAll {
          | GROUP BY mytime
        """.stripMargin)
     checkAnswer(sql(s"show datamap on table $tableName"),
-      Seq(Row("agg0_hour", "timeSeries", s"default.${tableName}_agg0_hour", "'event_time'='mytime', 'hour_granularity'='1'","NA", "NA")))
+      Seq(Row("agg0_hour", "timeSeries", s"default.${tableName}_agg0_hour", "'event_time'='mytime', 'hour_granularity'='1'","NA", "NA", null)))
     sql(s"drop table if exists $tableName")
 
     // for preaggreate datamap, the property is empty
@@ -262,7 +262,8 @@ class TestDataMapCommand extends QueryTest with BeforeAndAfterAll {
          | FROM $tableName GROUP BY name
          | """.stripMargin)
     checkAnswer(sql(s"show datamap on table $tableName"),
-      Seq(Row("agg0", "preaggregate", s"default.${tableName}_agg0", "","NA","NA")))
+      Seq(Row("agg0", "preaggregate", s"default.${tableName}_agg0", "","NA","NA",
+        "SELECT name,  count(age)  FROM datamapshowtest GROUP BY name")))
     sql(s"drop table if exists $tableName")
   }
 

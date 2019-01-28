@@ -27,6 +27,7 @@ import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.execution.command.{Checker, DataCommand}
+import org.apache.spark.sql.execution.command.preaaggregate.PreAggregateUtil
 import org.apache.spark.sql.types.StringType
 
 import org.apache.carbondata.core.constants.CarbonCommonConstants
@@ -51,7 +52,8 @@ case class CarbonDataMapShowCommand(tableIdentifier: Option[TableIdentifier])
       AttributeReference("Associated Table", StringType, nullable = false)(),
       AttributeReference("DataMap Properties", StringType, nullable = false)(),
       AttributeReference("DataMap Status", StringType, nullable = false)(),
-      AttributeReference("Sync Status", StringType, nullable = false)())
+      AttributeReference("Sync Status", StringType, nullable = false)(),
+      AttributeReference("Subquery", StringType, nullable = true)())
   }
 
   override def processData(sparkSession: SparkSession): Seq[Row] = {
@@ -143,7 +145,20 @@ case class CarbonDataMapShowCommand(tableIdentifier: Option[TableIdentifier])
               })
             }
           }
-          Row(s.getDataMapName, s.getProviderName, table, dmPropertieStr, dataMapStatus, syncInfo)
+
+          val subquery = if (s.getProviderName.equalsIgnoreCase(
+            DataMapClassProvider.MV.getShortName)) {
+            s.getCtasQuery
+          } else if (s.getProviderName.equalsIgnoreCase(
+            DataMapClassProvider.PREAGGREGATE.getShortName)
+            || s.getProviderName.equalsIgnoreCase(
+            DataMapClassProvider.TIMESERIES.getShortName)) {
+            PreAggregateUtil.getChildQuery(s.asInstanceOf[AggregationDataMapSchema])
+          } else {
+            null
+          }
+          Row(s.getDataMapName, s.getProviderName, table, dmPropertieStr, dataMapStatus, syncInfo,
+            if (null == subquery) null else subquery.replace("\n", " "))
       }
     } else {
       Seq.empty
