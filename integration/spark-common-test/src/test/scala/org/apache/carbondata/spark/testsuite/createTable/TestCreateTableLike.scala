@@ -33,8 +33,6 @@ class TestCreateTableLike extends QueryTest with BeforeAndAfterEach with BeforeA
     sql("drop table if exists hive_pt")
     sql("drop table if exists bkt_tbl")
     sql("drop table if exists stream_tbl")
-    sql("drop table if exists db2.targetTable")
-    sql("drop database if exists db2")
     sql("drop table if exists sourceTable")
     sql(
       """create table sourceTable
@@ -59,8 +57,6 @@ class TestCreateTableLike extends QueryTest with BeforeAndAfterEach with BeforeA
     sql("drop table if exists hive_pt")
     sql("drop table if exists bkt_tbl")
     sql("drop table if exists stream_tbl")
-    sql("drop table if exists db2.targetTable")
-    sql("drop database if exists db2")
     sql("drop table if exists sourceTable")
   }
 
@@ -136,12 +132,6 @@ class TestCreateTableLike extends QueryTest with BeforeAndAfterEach with BeforeA
       sql("create table sourceTable like sourceTable")
     }
     assert(exception.getMessage.contains("already exists in database"))
-  }
-
-  test("test different database") {
-    sql("create database db2")
-    sql("create table db2.targetTable like sourceTable")
-    checkTableProperties(TableIdentifier("sourceTable"), TableIdentifier("targetTable", Some("db2")))
   }
 
   test("command with location") {
