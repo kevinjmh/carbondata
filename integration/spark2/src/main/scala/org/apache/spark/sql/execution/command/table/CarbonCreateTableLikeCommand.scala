@@ -40,8 +40,7 @@ import org.apache.carbondata.core.metadata.schema.table.{TableInfo, TableSchema}
 case class CarbonCreateTableLikeCommand(
     sourceTable: TableIdentifier,
     targetTable: TableIdentifier,
-    ifNotExists: Boolean = false,
-    location: Option[String] = None) extends MetadataCommand {
+    ifNotExists: Boolean = false) extends MetadataCommand {
 
   private val LOGGER = LogServiceFactory.getLogService(this.getClass.getName)
 
@@ -87,7 +86,7 @@ case class CarbonCreateTableLikeCommand(
     dstTableInfo.setLastUpdatedTime(System.currentTimeMillis())
     dstTableInfo.setFactTable(dstTableSchema)
 
-    CarbonCreateTableCommand(dstTableInfo, ifNotExists, location).run(sparkSession)
+    CarbonCreateTableCommand(dstTableInfo, ifNotExists).run(sparkSession)
   }
 
   override protected def opName: String = "CREATE TABLE LIKE"
