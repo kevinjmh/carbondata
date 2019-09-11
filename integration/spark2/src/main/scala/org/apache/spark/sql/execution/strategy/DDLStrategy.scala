@@ -95,9 +95,8 @@ class DDLStrategy(sparkSession: SparkSession) extends SparkStrategy {
         val isCarbonTable = CarbonEnv.getInstance(sparkSession).carbonMetaStore
           .tableExists(createLikeTable.sourceTable)(sparkSession)
         if (isCarbonTable) {
-          ExecutedCommandExec(
-            CarbonCreateTableLikeCommand(createLikeTable.sourceTable, createLikeTable.targetTable,
-              createLikeTable.ifNotExists, createLikeTable.location)) :: Nil
+          ExecutedCommandExec(CarbonCreateTableLikeCommand(createLikeTable.sourceTable,
+            createLikeTable.targetTable, createLikeTable.ifNotExists)) :: Nil
         } else {
           ExecutedCommandExec(createLikeTable) :: Nil
         }
