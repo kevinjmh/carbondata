@@ -34,7 +34,7 @@ import org.apache.carbondata.core.metadata.schema.table.{TableInfo, TableSchema}
 * The syntax of using this command in SQL is:
 * {{{
 *   CREATE TABLE [IF NOT EXISTS] [db_name.]table_name
-*   LIKE [other_db_name.]existing_table_name [locationSpec]
+*   LIKE [other_db_name.]existing_table_name
 * }}}
 */
 case class CarbonCreateTableLikeCommand(
@@ -56,7 +56,7 @@ case class CarbonCreateTableLikeCommand(
     }
 
     val dstTableSchema = try {
-      // deep copy a TableSchema and update table ID & name
+      // deep copy a TableSchema and update table ID and name
       val bos = new ByteArrayOutputStream()
       val dos = new DataOutputStream(bos)
       srcTableInfo.getFactTable.write(dos)
