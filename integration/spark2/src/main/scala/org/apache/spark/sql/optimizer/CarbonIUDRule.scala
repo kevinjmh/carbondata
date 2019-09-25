@@ -17,12 +17,13 @@
 
 package org.apache.spark.sql.optimizer
 
-import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.spark.sql.ProjectForUpdate
 import org.apache.spark.sql.catalyst.expressions.{NamedExpression, PredicateHelper}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Project}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.command.mutation.CarbonProjectForUpdateCommand
+
+import org.apache.carbondata.core.constants.CarbonCommonConstants
 
 /**
  * Rule specific for IUD operations
@@ -56,7 +57,8 @@ class CarbonIUDRule extends Rule[LogicalPlan] with PredicateHelper {
             // modify plan for updated column *in place*
             isTransformed = true
             source.foreach{ col =>
-              val colName = col.name.substring(0, col.name.lastIndexOf(CarbonCommonConstants.UPDATED_COL_EXTENSION))
+              val colName = col.name.substring(0,
+                col.name.lastIndexOf(CarbonCommonConstants.UPDATED_COL_EXTENSION))
               val updateIdx = dest.indexWhere(_.name.equalsIgnoreCase(colName))
               dest.updated(updateIdx, col)
             }
