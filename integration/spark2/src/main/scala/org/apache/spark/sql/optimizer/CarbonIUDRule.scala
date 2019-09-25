@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.optimizer
 
+import org.apache.carbondata.core.constants.CarbonCommonConstants
 import org.apache.spark.sql.ProjectForUpdate
 import org.apache.spark.sql.catalyst.expressions.{NamedExpression, PredicateHelper}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Project}
@@ -39,7 +40,7 @@ class CarbonIUDRule extends Rule[LogicalPlan] with PredicateHelper {
           case Project(pList, child) if !isTransformed =>
             val (dest: Seq[NamedExpression], source: Seq[NamedExpression]) = pList
               .splitAt(pList.size - cols.size)
-            val diff = cols.diff(dest.map(_.name.toLowerCase))
+            // check complex column
             cols.foreach { col =>
               val complexExists = "\"name\":\"" + col + "\""
               if (dest.exists(m => m.dataType.json.contains(complexExists))) {
@@ -47,11 +48,19 @@ class CarbonIUDRule extends Rule[LogicalPlan] with PredicateHelper {
                   "Unsupported operation on Complex data type")
               }
             }
+            // check updated columns exists in table
+            val diff = cols.diff(dest.map(_.name.toLowerCase))
             if (diff.nonEmpty) {
               sys.error(s"Unknown column(s) ${ diff.mkString(",") } in table ${ table.tableName }")
             }
+            // modify plan for updated column *in place*
             isTransformed = true
-            Project(dest.filter(a => !cols.contains(a.name.toLowerCase)) ++ source, child)
+            source.foreach{ col =>
+              val colName = col.name.substring(0, col.name.lastIndexOf(CarbonCommonConstants.UPDATED_COL_EXTENSION))
+              val updateIdx = dest.indexWhere(_.name.equalsIgnoreCase(colName))
+              dest.updated(updateIdx, col)
+            }
+            Project(dest, child)
         }
         CarbonProjectForUpdateCommand(
           newPlan, table.tableIdentifier.database, table.tableIdentifier.table, cols)
