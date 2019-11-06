@@ -18,8 +18,11 @@
 package org.apache.carbondata.core.scan.filter.executer;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.List;
 
+import org.apache.carbondata.core.bloom.ColumnPagesBloomFilter;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.block.SegmentProperties;
 import org.apache.carbondata.core.datastore.chunk.DimensionColumnPage;
@@ -114,17 +117,25 @@ public class IncludeFilterExecuterImpl implements FilterExecuter {
           rawBlockletColumnChunks.getDimensionRawColumnChunks()[chunkIndex];
       BitSetGroup bitSetGroup = new BitSetGroup(dimensionRawColumnChunk.getPagesCount());
       filterValues = dimColumnExecuterInfo.getFilterKeys();
+      ColumnPagesBloomFilter bloomFilter = null;
       boolean isDecoded = false;
       for (int i = 0; i < dimensionRawColumnChunk.getPagesCount(); i++) {
         if (dimensionRawColumnChunk.getMaxValues() != null) {
           if (isScanRequired(dimensionRawColumnChunk, i)) {
-            DimensionColumnPage dimensionColumnPage = dimensionRawColumnChunk.decodeColumnPage(i);
             if (!isDecoded) {
               filterValues =  FilterUtil
                   .getEncodedFilterValues(dimensionRawColumnChunk.getLocalDictionary(),
                       dimColumnExecuterInfo.getFilterKeys());
+              // get page bloom filter for whole blocklet
+              bloomFilter = dimensionRawColumnChunk.getPageBloomFilter();
               isDecoded = true;
             }
+            // use page bloom to check page again
+            if (null != bloomFilter && !bloomFilter.isScanRequired(filterValues, i)) {
+              continue;
+            }
+            // scan detail column value
+            DimensionColumnPage dimensionColumnPage = dimensionRawColumnChunk.decodeColumnPage(i);
             BitSet bitSet = getFilteredIndexes(dimensionColumnPage,
                 dimensionRawColumnChunk.getRowCount()[i], useBitsetPipeLine,
                 rawBlockletColumnChunks.getBitSetGroup(), i);
@@ -217,6 +228,14 @@ public class IncludeFilterExecuterImpl implements FilterExecuter {
           bitSet.set(i);
         }
       }
+      // prune pages with bloom if not all pruned
+      if (bitSet.nextSetBit(0) != -1) {
+        ColumnPagesBloomFilter bloomFilter = dimensionRawColumnChunk.getPageBloomFilter();
+        if (null != bloomFilter) {
+          return bloomFilter.prunePages(
+                  dimColumnExecuterInfo.getFilterKeys(), bitSet);
+        }
+      }
       return bitSet;
     } else if (isMeasurePresentInCurrentBlock) {
       int chunkIndex = segmentProperties.getMeasuresOrdinalToChunkMapping()
@@ -238,6 +257,20 @@ public class IncludeFilterExecuterImpl implements FilterExecuter {
           }
         } else {
           bitSet.set(i);
+        }
+      }
+
+      // prune pages with bloom if not all pruned
+      if (bitSet.nextSetBit(0) != -1) {
+        ColumnPagesBloomFilter bloomFilter = measureRawColumnChunk.getPageBloomFilter();
+        if (null != bloomFilter) {
+          // converting filter keys to byte[]
+          List<byte[]> filterKeyBytes = new ArrayList<>();
+          for (Object filterVal : msrColumnExecutorInfo.getFilterKeys()) {
+            filterKeyBytes.add(
+                    CarbonUtil.getValueAsBytes(msrColumnEvaluatorInfo.getType(), filterVal));
+          }
+          return bloomFilter.prunePages(filterKeyBytes.toArray(new byte[0][0]), bitSet);
         }
       }
       return bitSet;

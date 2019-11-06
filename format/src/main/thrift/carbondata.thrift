@@ -151,8 +151,16 @@ struct DataChunk3{
     2: optional list<i32> page_offset; // Offset of each chunk
     3: optional list<i32> page_length; // Length of each chunk
     4: optional LocalDictionaryChunk local_dictionary; // to store blocklet local dictionary values
-   
+    5: optional PageBloomChunk page_bloom_chunk; // data of hash function and bitmaps of each page
  }
+
+ struct PageBloomChunk{
+    1: required i32 vector_size; // vector size of page bloom filter
+    2: required i16 num_hash; // number of resulting hashed values
+    3: required i16 hash_type; // type of hash function
+    4: required list<binary> pagebloom_list; // list of compressed bitmap of page bloom filter, one for a page
+ }
+
 /**
  * Information about a blocklet for V1 format
  */

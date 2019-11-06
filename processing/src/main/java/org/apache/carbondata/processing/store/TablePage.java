@@ -99,6 +99,8 @@ public class TablePage {
     noDictDimensionPages = new ColumnPage[model.getNoDictionaryCount()];
     int tmpNumDictDimIdx = 0;
     int tmpNumNoDictDimIdx = 0;
+
+    // create page for each column
     for (int i = 0; i < dictDimensionPages.length + noDictDimensionPages.length; i++) {
       TableSpec.DimensionSpec spec = tableSpec.getDimensionSpec(i);
       ColumnType columnType = tableSpec.getDimensionSpec(i).getColumnType();
@@ -157,6 +159,10 @@ public class TablePage {
         }
         noDictDimensionPages[tmpNumNoDictDimIdx++] = page;
       }
+      // init to build page bloom
+      if (page.getColumnSpec().isPageBloomColumn()) {
+        page.initBloom();
+      }
     }
     complexDimensionPages = new ComplexColumnPage[model.getComplexColumnCount()];
     for (int i = 0; i < complexDimensionPages.length; i++) {
@@ -177,6 +183,11 @@ public class TablePage {
       }
       page.setStatsCollector(PrimitivePageStatsCollector.newInstance(dataTypes[i]));
       measurePages[i] = page;
+
+      // init to build page bloom
+      if (page.getColumnSpec().isPageBloomColumn()) {
+        page.initBloom();
+      }
     }
 
     // for complex type, `complexIndexMap` is used in multithread (in multiple Producer),
@@ -316,7 +327,7 @@ public class TablePage {
     }
     byte[] output = new byte[input.length + 2];
     ByteBuffer buffer = ByteBuffer.wrap(output);
-    buffer.putShort((short)input.length);
+    buffer.putShort((short) input.length);
     buffer.put(input, 0, input.length);
     return output;
   }

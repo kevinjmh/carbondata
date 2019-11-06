@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.carbondata.common.logging.LogServiceFactory;
+import org.apache.carbondata.core.bloom.ColumnPagesBloomFilter;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.blocklet.BlockletEncodedColumnPage;
 import org.apache.carbondata.core.datastore.blocklet.EncodedBlocklet;
@@ -441,7 +442,7 @@ public class CarbonMetadataUtil {
    * return DataChunk3 that contains the input DataChunk2 list
    */
   public static DataChunk3 getDataChunk3(List<DataChunk2> dataChunksList,
-      LocalDictionaryChunk encodedDictionary) {
+      LocalDictionaryChunk encodedDictionary, ColumnPagesBloomFilter bloomFilter) {
     int offset = 0;
     DataChunk3 dataChunk = new DataChunk3();
     List<Integer> pageOffsets = new ArrayList<>();
@@ -458,6 +459,9 @@ public class CarbonMetadataUtil {
     dataChunk.setData_chunk_list(dataChunksList);
     dataChunk.setPage_length(pageLengths);
     dataChunk.setPage_offset(pageOffsets);
+    if (null != bloomFilter) {
+      dataChunk.setPage_bloom_chunk(bloomFilter.toPageBloomChunk());
+    }
     return dataChunk;
   }
 
@@ -474,8 +478,10 @@ public class CarbonMetadataUtil {
         .getEncodedColumnPageList()) {
       dataChunksList.add(encodedColumnPage.getPageMetadata());
     }
+    // get and set PageBloomChunk from blocklet. null means page bloom is disabled
     return CarbonMetadataUtil
-        .getDataChunk3(dataChunksList, blockletEncodedColumnPage.getEncodedDictionary());
+        .getDataChunk3(dataChunksList, blockletEncodedColumnPage.getEncodedDictionary(),
+                blockletEncodedColumnPage.getColumnPagesBloomFilter());
   }
 
   /**
@@ -490,7 +496,9 @@ public class CarbonMetadataUtil {
         .getEncodedColumnPageList()) {
       dataChunksList.add(encodedColumnPage.getPageMetadata());
     }
-    return CarbonMetadataUtil.getDataChunk3(dataChunksList, null);
+    // get and set PageBloomChunk from blocklet. null means page bloom is disabled
+    return CarbonMetadataUtil.getDataChunk3(dataChunksList, null,
+            blockletEncodedColumnPage.getColumnPagesBloomFilter());
   }
 
   private static int compareMeasureData(byte[] first, byte[] second, DataType dataType) {

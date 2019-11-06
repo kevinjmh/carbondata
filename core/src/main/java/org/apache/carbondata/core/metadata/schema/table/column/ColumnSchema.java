@@ -135,6 +135,11 @@ public class ColumnSchema implements Serializable, Writable {
   private String timeSeriesFunction = "";
 
   /**
+   * set whether the column enables page bloom or not.
+   */
+  private boolean isPageBloomColumn = false;
+
+  /**
    * set whether the column is local dictionary column or not.
    */
   private boolean isLocalDictColumn = false;
@@ -151,6 +156,14 @@ public class ColumnSchema implements Serializable, Writable {
    */
   public void setLocalDictColumn(boolean localDictColumn) {
     isLocalDictColumn = localDictColumn;
+  }
+
+  public boolean isPageBloomColumn() {
+    return isPageBloomColumn;
+  }
+
+  public void setPageBloomColumn(boolean pageBloomColumn) {
+    isPageBloomColumn = pageBloomColumn;
   }
 
   /**
@@ -532,6 +545,7 @@ public class ColumnSchema implements Serializable, Writable {
     }
     out.writeBoolean(isLocalDictColumn);
     out.writeBoolean(indexColumn);
+    out.writeBoolean(isPageBloomColumn);
   }
 
   @Override
@@ -582,6 +596,7 @@ public class ColumnSchema implements Serializable, Writable {
     }
     this.isLocalDictColumn = in.readBoolean();
     this.indexColumn = in.readBoolean();
+    this.isPageBloomColumn = in.readBoolean();
   }
 
   /**
