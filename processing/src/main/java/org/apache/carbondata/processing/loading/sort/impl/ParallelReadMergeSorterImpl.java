@@ -87,9 +87,8 @@ public class ParallelReadMergeSorterImpl extends AbstractMergeSorter {
   @Override
   public Iterator<CarbonRowBatch>[] sort(Iterator<CarbonRowBatch>[] iterators)
       throws CarbonDataLoadingException {
-    SortDataRows sortDataRow = new SortDataRows(sortParameters, intermediateFileMerger);
+    SortDataRows[] sortDataRows = new SortDataRows[iterators.length];
     final int batchSize = CarbonProperties.getInstance().getBatchSize();
-    sortDataRow.initialize();
     this.executorService = Executors.newFixedThreadPool(iterators.length,
         new CarbonThreadFactory("SafeParallelSorterPool:" + sortParameters.getTableName(),
                 true));
@@ -97,13 +96,15 @@ public class ParallelReadMergeSorterImpl extends AbstractMergeSorter {
 
     try {
       for (int i = 0; i < iterators.length; i++) {
+        sortDataRows[i] = new SortDataRows(sortParameters, intermediateFileMerger);
+        sortDataRows[i].initialize();
         executorService.execute(
-            new SortIteratorThread(iterators[i], sortDataRow, batchSize, rowCounter,
+            new SortIteratorThread(iterators[i], sortDataRows[i], batchSize, rowCounter,
                 threadStatusObserver));
       }
       executorService.shutdown();
       executorService.awaitTermination(2, TimeUnit.DAYS);
-      processRowToNextStep(sortDataRow, sortParameters);
+      processRowToNextStep(sortDataRows, sortParameters);
     } catch (Exception e) {
       checkError();
       throw new CarbonDataLoadingException("Problem while shutdown the server ", e);
@@ -154,11 +155,13 @@ public class ParallelReadMergeSorterImpl extends AbstractMergeSorter {
   /**
    * Below method will be used to process data to next step
    */
-  private boolean processRowToNextStep(SortDataRows sortDataRows, SortParameters parameters)
+  private boolean processRowToNextStep(SortDataRows[] sortDataRows, SortParameters parameters)
       throws CarbonDataLoadingException {
     try {
-      // start sorting
-      sortDataRows.startSorting();
+      for (int i = 0; i < sortDataRows.length; i++) {
+        // start sorting
+        sortDataRows[i].startSorting();
+      }
 
       // check any more rows are present
       LOGGER.info("Record Processed For table: " + parameters.getTableName());

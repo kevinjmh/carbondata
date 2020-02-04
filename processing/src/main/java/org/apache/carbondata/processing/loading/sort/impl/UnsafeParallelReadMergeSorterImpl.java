@@ -80,14 +80,8 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
   public Iterator<CarbonRowBatch>[] sort(Iterator<CarbonRowBatch>[] iterators)
       throws CarbonDataLoadingException {
     int inMemoryChunkSizeInMB = CarbonProperties.getInstance().getSortMemoryChunkSizeInMB();
-    UnsafeSortDataRows sortDataRow =
-        new UnsafeSortDataRows(sortParameters, unsafeIntermediateFileMerger, inMemoryChunkSizeInMB);
+    UnsafeSortDataRows[] sortDataRows = new UnsafeSortDataRows[iterators.length];
     final int batchSize = CarbonProperties.getInstance().getBatchSize();
-    try {
-      sortDataRow.initialize();
-    } catch (Exception e) {
-      throw new CarbonDataLoadingException(e);
-    }
     this.executorService = Executors.newFixedThreadPool(iterators.length,
         new CarbonThreadFactory("UnsafeParallelSorterPool:" + sortParameters.getTableName(),
                 true));
@@ -95,14 +89,16 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
 
     try {
       for (int i = 0; i < iterators.length; i++) {
-        executorService.execute(
-            new SortIteratorThread(iterators[i], sortDataRow, batchSize, rowCounter,
-                this.threadStatusObserver));
+        sortDataRows[i] = new UnsafeSortDataRows(
+                sortParameters, unsafeIntermediateFileMerger, inMemoryChunkSizeInMB);
+        sortDataRows[i].initialize();
+        executorService.execute(new SortIteratorThread(iterators[i], sortDataRows[i],
+                batchSize, rowCounter, this.threadStatusObserver));
       }
       executorService.shutdown();
       executorService.awaitTermination(2, TimeUnit.DAYS);
       if (!sortParameters.getObserver().isFailed()) {
-        processRowToNextStep(sortDataRow, sortParameters);
+        processRowToNextStep(sortDataRows, sortParameters);
       }
     } catch (Exception e) {
       checkError();
@@ -154,11 +150,13 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
   /**
    * Below method will be used to process data to next step
    */
-  private boolean processRowToNextStep(UnsafeSortDataRows sortDataRows, SortParameters parameters)
+  private boolean processRowToNextStep(UnsafeSortDataRows[] sortDataRows, SortParameters parameters)
       throws CarbonDataLoadingException {
     try {
-      // start sorting
-      sortDataRows.startSorting();
+      for (int i = 0; i < sortDataRows.length; i++) {
+        // start sorting
+        sortDataRows[i].startSorting();
+      }
 
       // check any more rows are present
       LOGGER.info("Record Processed For table: " + parameters.getTableName());
