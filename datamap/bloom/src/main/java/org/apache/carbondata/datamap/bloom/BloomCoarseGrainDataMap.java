@@ -27,6 +27,7 @@ import java.util.Set;
 
 import org.apache.carbondata.common.annotations.InterfaceAudience;
 import org.apache.carbondata.common.logging.LogServiceFactory;
+import org.apache.carbondata.core.bloom.BloomFilterUtil;
 import org.apache.carbondata.core.cache.Cache;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datamap.dev.DataMapModel;
@@ -297,7 +298,7 @@ public class BloomCoarseGrainDataMap extends CoarseGrainDataMap {
     if (carbonColumn.isMeasure()) {
       // for measures, the value is already the type, just convert it to bytes.
       if (convertedValue == null) {
-        convertedValue = DataConvertUtil.getNullValueForMeasure(carbonColumn.getDataType(),
+        convertedValue = BloomFilterUtil.getNullValueForMeasure(carbonColumn.getDataType(),
             carbonColumn.getColumnSchema().getScale());
       }
       // Carbon stores boolean as byte. Here we convert it for `getValueAsBytes`
@@ -313,7 +314,7 @@ public class BloomCoarseGrainDataMap extends CoarseGrainDataMap {
       // so convert the data to bytes
       if (DataTypeUtil.isPrimitiveColumn(carbonColumn.getDataType())) {
         if (convertedValue == null) {
-          convertedValue = DataConvertUtil.getNullValueForMeasure(carbonColumn.getDataType(),
+          convertedValue = BloomFilterUtil.getNullValueForMeasure(carbonColumn.getDataType(),
               carbonColumn.getColumnSchema().getScale());
         }
         internalFilterValue =
