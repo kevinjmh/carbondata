@@ -21,8 +21,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.carbondata.core.metadata.blocklet.index.BlockletIndex;
 
@@ -74,7 +77,21 @@ public class BlockletInfo implements Serializable, Writable {
 
   private int[] numberOfRowsPerPage;
 
+  /**
+   * ByteBuffer is not serializable, use transient to suppress findbug error
+   * avoid doing conversion between ByteBuffer and Byte Array
+   */
+  private transient Map<Integer, ByteBuffer> blockletBloomBuffers;
+
   private Boolean isSorted = true;
+
+  public Map<Integer, ByteBuffer> getBlockletBloomBuffers() {
+    return blockletBloomBuffers;
+  }
+
+  public void setBlockletBloomBuffers(Map<Integer, ByteBuffer> blockletBloomBuffers) {
+    this.blockletBloomBuffers = blockletBloomBuffers;
+  }
 
   /**
    * @return the numberOfRows
@@ -195,6 +212,14 @@ public class BlockletInfo implements Serializable, Writable {
       //for old store
       output.writeShort(0);
     }
+    // bloom
+    output.writeInt(blockletBloomBuffers.size());
+    for (Map.Entry<Integer, ByteBuffer> pair : blockletBloomBuffers.entrySet()) {
+      byte[] bufArray = pair.getValue().array();
+      output.writeInt(pair.getKey());
+      output.writeInt(bufArray.length);
+      output.write(bufArray);
+    }
   }
 
   @Override
@@ -231,6 +256,16 @@ public class BlockletInfo implements Serializable, Writable {
       for (int i = 0; i < numberOfRowsPerPage.length; i++) {
         numberOfRowsPerPage[i] = input.readInt();
       }
+    }
+    // bloom
+    int blockletNum = input.readInt();
+    blockletBloomBuffers = new HashMap<>(blockletNum);
+    for (int i = 0; i < blockletNum; i++) {
+      int key = input.readInt();
+      int arrLen = input.readInt();
+      byte[] bufArray = new byte[arrLen];
+      input.readFully(bufArray);
+      blockletBloomBuffers.put(key, ByteBuffer.wrap(bufArray));
     }
   }
 
