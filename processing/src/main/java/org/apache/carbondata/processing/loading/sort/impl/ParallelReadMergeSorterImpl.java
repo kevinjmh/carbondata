@@ -91,7 +91,6 @@ public class ParallelReadMergeSorterImpl extends AbstractMergeSorter {
   @Override
   public Iterator<CarbonRowBatch>[] sort(Iterator<CarbonRowBatch>[] iterators)
       throws CarbonDataLoadingException {
-    SortDataRows[] sortDataRows = new SortDataRows[iterators.length];
     final int batchSize = CarbonProperties.getInstance().getBatchSize();
     this.executorService = Executors.newFixedThreadPool(sortParameters.getNumberOfCores(),
         new CarbonThreadFactory("SafeParallelSorterPool:" + sortParameters.getTableName(),
@@ -100,14 +99,19 @@ public class ParallelReadMergeSorterImpl extends AbstractMergeSorter {
 
     try {
       for (int i = 0; i < iterators.length; i++) {
-        sortDataRows[i] = new SortDataRows(sortParameters, intermediateFileMerger);
+        SortDataRows sortDataRows = new SortDataRows(sortParameters, intermediateFileMerger);
         executorService.execute(
-            new SortIteratorThread(iterators[i], sortDataRows[i], batchSize, rowCounter,
+            new SortIteratorThread(iterators[i], sortDataRows, batchSize, rowCounter,
                 threadStatusObserver));
       }
       executorService.shutdown();
       executorService.awaitTermination(2, TimeUnit.DAYS);
-      processRowToNextStep(sortDataRows, sortParameters);
+      LOGGER.info("Record Processed For table: " + sortParameters.getTableName());
+      CarbonTimeStatisticsFactory.getLoadStatisticsInstance()
+          .recordSortRowsStepTotalTime(sortParameters.getPartitionID(), System.currentTimeMillis());
+      CarbonTimeStatisticsFactory.getLoadStatisticsInstance()
+          .recordDictionaryValuesTotalTime(sortParameters.getPartitionID(),
+                      System.currentTimeMillis());
     } catch (Exception e) {
       checkError();
       throw new CarbonDataLoadingException("Problem while shutdown the server ", e);
@@ -156,30 +160,6 @@ public class ParallelReadMergeSorterImpl extends AbstractMergeSorter {
   }
 
   /**
-   * Below method will be used to process data to next step
-   */
-  private boolean processRowToNextStep(SortDataRows[] sortDataRows, SortParameters parameters)
-      throws CarbonDataLoadingException {
-    try {
-      for (int i = 0; i < sortDataRows.length; i++) {
-        // start sorting
-        sortDataRows[i].startSorting();
-      }
-
-      // check any more rows are present
-      LOGGER.info("Record Processed For table: " + parameters.getTableName());
-      CarbonTimeStatisticsFactory.getLoadStatisticsInstance()
-          .recordSortRowsStepTotalTime(parameters.getPartitionID(), System.currentTimeMillis());
-      CarbonTimeStatisticsFactory.getLoadStatisticsInstance()
-          .recordDictionaryValuesTotalTime(parameters.getPartitionID(),
-              System.currentTimeMillis());
-      return false;
-    } catch (CarbonSortKeyAndGroupByException e) {
-      throw new CarbonDataLoadingException(e);
-    }
-  }
-
-  /**
    * This thread iterates the iterator and adds the rows to @{@link SortDataRows}
    */
   private static class SortIteratorThread implements Runnable {
@@ -222,6 +202,7 @@ public class ParallelReadMergeSorterImpl extends AbstractMergeSorter {
             rowCounter.getAndAdd(i);
           }
         }
+        sortDataRows.startSorting();
       } catch (Exception e) {
         LOGGER.error(e.getMessage(), e);
         observer.notifyFailed(e);
