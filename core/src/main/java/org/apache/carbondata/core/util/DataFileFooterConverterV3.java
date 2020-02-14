@@ -18,9 +18,12 @@
 package org.apache.carbondata.core.util;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.block.TableBlockInfo;
 import org.apache.carbondata.core.datastore.impl.FileFactory;
 import org.apache.carbondata.core.metadata.ColumnarFormatVersion;
@@ -153,6 +156,15 @@ public class DataFileFooterConverterV3 extends AbstractDataFileFooterConverter {
         rowCountInPages[i] = blockletInfoThrift.getRow_count_in_page().get(i);
       }
       blockletInfo.setNumberOfRowsPerPage(rowCountInPages);
+    }
+    if (blockletInfoThrift.isSetBlockletBloomFilter() &&
+            CarbonProperties.getInstance().getProperty(
+                    CarbonCommonConstants.ENABLED_BLOOM_BLOCKLET,
+                    CarbonCommonConstants.ENABLED_BLOOM_BLOCKLET_DEFAULT)
+                    .equalsIgnoreCase("true")) {
+      // if bloom is not enabled, no need to read and send to executor
+      Map<Integer, ByteBuffer> bloomBuffers = blockletInfoThrift.getBlockletBloomFilter();
+      blockletInfo.setBlockletBloomBuffers(bloomBuffers);
     }
     return blockletInfo;
   }
