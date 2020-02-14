@@ -84,10 +84,6 @@ public class UnsafeSortDataRows {
 
   public void initialize() {
     this.rowPage = createUnsafeRowPage();
-    // Delete if any older file exists in sort temp folder
-    CarbonDataProcessorUtil.deleteSortLocationIfExists(parameters.getTempFileLocation());
-    // create new sort temp directory
-    CarbonDataProcessorUtil.createLocations(parameters.getTempFileLocation());
   }
 
   private UnsafeCarbonRowPage createUnsafeRowPage() {
