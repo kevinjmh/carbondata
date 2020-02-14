@@ -19,7 +19,9 @@ package org.apache.carbondata.core.scan.filter.executer;
 
 import java.io.IOException;
 import java.util.BitSet;
+import java.util.Map;
 
+import org.apache.carbondata.core.bloom.RoaringBloomFilter;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.block.SegmentProperties;
 import org.apache.carbondata.core.datastore.chunk.DimensionColumnPage;
@@ -733,5 +735,10 @@ public class RangeValueFilterExecuterImpl implements FilterExecuter {
                 rawBlockletColumnChunks.getFileReader(), chunkIndex);
       }
     }
+  }
+
+  @Override
+  public boolean isScanRequired(Map<Integer, RoaringBloomFilter> blockletBloomfilters) {
+    return true;
   }
 }
