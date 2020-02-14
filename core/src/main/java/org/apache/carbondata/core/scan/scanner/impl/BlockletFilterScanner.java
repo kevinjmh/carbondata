@@ -19,7 +19,9 @@ package org.apache.carbondata.core.scan.scanner.impl;
 
 import java.io.IOException;
 import java.util.BitSet;
+import java.util.Map;
 
+import org.apache.carbondata.core.bloom.RoaringBloomFilter;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.DataRefNode;
 import org.apache.carbondata.core.datastore.FileReader;
@@ -63,6 +65,7 @@ public class BlockletFilterScanner extends BlockletFullScanner {
    * repeating.
    */
   private boolean isMinMaxEnabled;
+  private boolean isBloomEnabled;
 
   private QueryStatisticsModel queryStatisticsModel;
 
@@ -77,6 +80,13 @@ public class BlockletFilterScanner extends BlockletFullScanner {
             CarbonCommonConstants.MIN_MAX_DEFAULT_VALUE);
     if (null != minMaxEnableValue) {
       isMinMaxEnabled = Boolean.parseBoolean(minMaxEnableValue);
+    }
+    // to check whether blocklet bloom is enabled or not
+    String blockletBloomEnableValue = CarbonProperties.getInstance()
+            .getProperty(CarbonCommonConstants.ENABLED_BLOOM_BLOCKLET,
+                    CarbonCommonConstants.ENABLED_BLOOM_BLOCKLET_DEFAULT);
+    if (null != blockletBloomEnableValue) {
+      isBloomEnabled = Boolean.parseBoolean(blockletBloomEnableValue);
     }
     // get the filter tree
     this.filterExecuter = blockExecutionInfo.getFilterExecuterTree();
@@ -118,28 +128,38 @@ public class BlockletFilterScanner extends BlockletFullScanner {
     totalBlockletStatistic.addCountStatistic(QueryStatisticsConstants.TOTAL_BLOCKLET_NUM,
         totalBlockletStatistic.getCount() + 1);
     // apply min max
+    boolean isScanRequired = false;
     if (isMinMaxEnabled) {
       if (null == dataBlock.getColumnsMaxValue()
               || null == dataBlock.getColumnsMinValue()) {
-        return true;
-      }
-      BitSet bitSet = null;
-      // check for implicit include filter instance
-      if (filterExecuter instanceof ImplicitColumnFilterExecutor) {
-        String blockletId = blockExecutionInfo.getBlockIdString() +
-            CarbonCommonConstants.FILE_SEPARATOR + dataBlock.blockletIndex();
-        bitSet = ((ImplicitColumnFilterExecutor) filterExecuter)
-            .isFilterValuesPresentInBlockOrBlocklet(
-                dataBlock.getColumnsMaxValue(),
-                dataBlock.getColumnsMinValue(), blockletId, dataBlock.minMaxFlagArray());
+        isScanRequired = true;
       } else {
-        bitSet = this.filterExecuter
-            .isScanRequired(dataBlock.getColumnsMaxValue(),
-                dataBlock.getColumnsMinValue(), dataBlock.minMaxFlagArray());
+        BitSet bitSet = null;
+        // check for implicit include filter instance
+        if (filterExecuter instanceof ImplicitColumnFilterExecutor) {
+          String blockletId = blockExecutionInfo.getBlockIdString() +
+                  CarbonCommonConstants.FILE_SEPARATOR + dataBlock.blockletIndex();
+          bitSet = ((ImplicitColumnFilterExecutor) filterExecuter)
+                  .isFilterValuesPresentInBlockOrBlocklet(
+                          dataBlock.getColumnsMaxValue(),
+                          dataBlock.getColumnsMinValue(), blockletId, dataBlock.minMaxFlagArray());
+        } else {
+          bitSet = this.filterExecuter
+                  .isScanRequired(dataBlock.getColumnsMaxValue(),
+                          dataBlock.getColumnsMinValue(), dataBlock.minMaxFlagArray());
+        }
+        isScanRequired = !bitSet.isEmpty();
       }
-      return !bitSet.isEmpty();
     }
-    return true;
+    // apply bloom if minmax not skip this blocklet
+    if (isScanRequired && isBloomEnabled &&
+            !(filterExecuter instanceof ImplicitColumnFilterExecutor)) {
+      Map<Integer, RoaringBloomFilter> blockletBloomfilters = dataBlock.getColumnsBloomFilter();
+      if (null != blockletBloomfilters) {
+        isScanRequired = this.filterExecuter.isScanRequired(blockletBloomfilters);
+      }
+    }
+    return isScanRequired;
   }
 
   @Override
