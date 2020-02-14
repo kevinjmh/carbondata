@@ -181,6 +181,7 @@ struct BlockletInfo3{
     5: required i64 measure_offsets;
     6: required i32 number_number_of_pages; // This is rquired for alter table, in case of alter table when filter is only selected on new added column this will help
     7: optional list<i32> row_count_in_page; // This will contain the row count in each page.
+    8: optional map<i32, binary> blockletBloomFilter; // mapping from column ordinal to blocklet level bloom filter
   }
 
 /**
@@ -208,6 +209,7 @@ struct FileFooter3{
     5: optional dictionary.ColumnDictionaryChunk dictionary; // Blocklet local dictionary
     6: optional bool is_sort; // True if the data is sorted in this file, it is used for compaction to decide whether to use merge sort or not
     7: optional map<string, string> extra_info; // map used to write extra info/metadata to file footer ,like who is writing the file and in which version the file is written etc
+    8: optional map<i32, binary> blockBloomFilter; // mapping from column ordinal to block level bloom filter
 }
 
 /**
