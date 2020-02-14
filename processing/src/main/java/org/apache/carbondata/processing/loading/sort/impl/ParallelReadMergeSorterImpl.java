@@ -82,12 +82,16 @@ public class ParallelReadMergeSorterImpl extends AbstractMergeSorter {
     finalMerger =
         new SingleThreadFinalSortFilesMerger(dataFolderLocations, sortParameters.getTableName(),
             sortParameters);
+    // Delete if any older file exists in sort temp folder
+    CarbonDataProcessorUtil.deleteSortLocationIfExists(sortParameters.getTempFileLocation());
+    // create new sort temp directory
+    CarbonDataProcessorUtil.createLocations(sortParameters.getTempFileLocation());
   }
 
   @Override
   public Iterator<CarbonRowBatch>[] sort(Iterator<CarbonRowBatch>[] iterators)
       throws CarbonDataLoadingException {
-    SortDataRows[] sortDataRows = new SortDataRows[iterators.length];
+    SortDataRows[] sortDataRows = new SortDataRows[sortParameters.getNumberOfCores()];
     final int batchSize = CarbonProperties.getInstance().getBatchSize();
     this.executorService = Executors.newFixedThreadPool(iterators.length,
         new CarbonThreadFactory("SafeParallelSorterPool:" + sortParameters.getTableName(),
@@ -97,7 +101,6 @@ public class ParallelReadMergeSorterImpl extends AbstractMergeSorter {
     try {
       for (int i = 0; i < iterators.length; i++) {
         sortDataRows[i] = new SortDataRows(sortParameters, intermediateFileMerger);
-        sortDataRows[i].initialize();
         executorService.execute(
             new SortIteratorThread(iterators[i], sortDataRows[i], batchSize, rowCounter,
                 threadStatusObserver));
@@ -204,6 +207,7 @@ public class ParallelReadMergeSorterImpl extends AbstractMergeSorter {
     @Override
     public void run() {
       try {
+        sortDataRows.initialize();
         while (iterator.hasNext()) {
           CarbonRowBatch batch = iterator.next();
           int i = 0;
