@@ -40,7 +40,6 @@ import org.apache.carbondata.processing.loading.sort.unsafe.merger.UnsafeInterme
 import org.apache.carbondata.processing.loading.sort.unsafe.merger.UnsafeSingleThreadFinalSortFilesMerger;
 import org.apache.carbondata.processing.sort.exception.CarbonSortKeyAndGroupByException;
 import org.apache.carbondata.processing.sort.sortdata.SortParameters;
-import org.apache.carbondata.processing.util.CarbonDataProcessorUtil;
 
 import org.apache.log4j.Logger;
 
