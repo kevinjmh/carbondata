@@ -88,7 +88,7 @@ public class SortIntermediateFileMerger {
         + CarbonCommonConstants.MERGERD_EXTENSION);
     IntermediateFileMerger merger = new IntermediateFileMerger(parameters, intermediateFiles, file);
     if (LOGGER.isDebugEnabled()) {
-      LOGGER.debug("Sumitting request for intermediate merging no of files: "
+      LOGGER.debug("Submitting request for intermediate merging number of files: "
               + intermediateFiles.length);
     }
     mergerTask.add(executorService.submit(merger));
