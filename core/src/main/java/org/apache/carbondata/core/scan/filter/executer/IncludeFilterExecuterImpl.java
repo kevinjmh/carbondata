@@ -19,13 +19,17 @@ package org.apache.carbondata.core.scan.filter.executer;
 
 import java.io.IOException;
 import java.util.BitSet;
+import java.util.Map;
 
+import org.apache.carbondata.core.bloom.BloomFilterUtil;
+import org.apache.carbondata.core.bloom.RoaringBloomFilter;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.datastore.block.SegmentProperties;
 import org.apache.carbondata.core.datastore.chunk.DimensionColumnPage;
 import org.apache.carbondata.core.datastore.chunk.impl.DimensionRawColumnChunk;
 import org.apache.carbondata.core.datastore.chunk.impl.MeasureRawColumnChunk;
 import org.apache.carbondata.core.datastore.page.ColumnPage;
+import org.apache.carbondata.core.datastore.page.encoding.bool.BooleanConvert;
 import org.apache.carbondata.core.metadata.datatype.DataType;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
 import org.apache.carbondata.core.scan.filter.FilterExecutorUtil;
@@ -615,5 +619,44 @@ public class IncludeFilterExecuterImpl implements FilterExecuter {
                 rawBlockletColumnChunks.getFileReader(), chunkIndex);
       }
     }
+  }
+
+  @Override
+  public boolean isScanRequired(Map<Integer, RoaringBloomFilter> blockletBloomfilters) {
+    int chunkIndex = 0;
+    if (isDimensionPresentInCurrentBlock) {
+      chunkIndex = dimColumnEvaluatorInfo.getColumnIndexInMinMaxByteArray();
+      RoaringBloomFilter bloomFilter = blockletBloomfilters.get(chunkIndex);
+      if (null == bloomFilter) {
+        return true;
+      }
+      filterValues = dimColumnExecuterInfo.getFilterKeys();
+      for (byte[] filterValue : filterValues) {
+        if (bloomFilter.membershipTest(filterValue)) {
+          return true;
+        }
+      }
+    } else if (isMeasurePresentInCurrentBlock) {
+      chunkIndex = msrColumnEvaluatorInfo.getColumnIndexInMinMaxByteArray();
+      RoaringBloomFilter bloomFilter = blockletBloomfilters.get(chunkIndex);
+      if (null == bloomFilter) {
+        return true;
+      }
+      for (Object filterVal : msrColumnExecutorInfo.getFilterKeys()) {
+        if (null == filterVal) {
+          filterVal = BloomFilterUtil.getNullValueForMeasure(msrColumnEvaluatorInfo.getType(),
+                  msrColumnEvaluatorInfo.getMeasure().getScale());
+        }
+        if (msrColumnEvaluatorInfo.getType().equals(DataTypes.BOOLEAN)) {
+          filterVal = BooleanConvert.boolean2Byte((Boolean)filterVal);
+        }
+        byte[] filterValue = CarbonUtil.getValueAsBytes(
+                msrColumnEvaluatorInfo.getType(), filterVal);
+        if (bloomFilter.membershipTest(filterValue)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 }
