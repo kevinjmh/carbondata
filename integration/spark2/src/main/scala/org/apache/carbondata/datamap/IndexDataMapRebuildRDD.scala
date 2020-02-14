@@ -35,6 +35,7 @@ import org.apache.spark.sql.types.Decimal
 
 import org.apache.carbondata.common.logging.LogServiceFactory
 import org.apache.carbondata.converter.SparkDataTypeConverterImpl
+import org.apache.carbondata.core.bloom.BloomFilterUtil
 import org.apache.carbondata.core.datamap.{DataMapStoreManager, Segment}
 import org.apache.carbondata.core.datamap.dev.DataMapBuilder
 import org.apache.carbondata.core.datastore.block.SegmentProperties
@@ -50,7 +51,6 @@ import org.apache.carbondata.core.scan.wrappers.ByteArrayWrapper
 import org.apache.carbondata.core.statusmanager.SegmentStatusManager
 import org.apache.carbondata.core.util.{ByteUtil, DataTypeUtil, TaskMetricsMap}
 import org.apache.carbondata.core.util.path.CarbonTablePath
-import org.apache.carbondata.datamap.bloom.DataConvertUtil
 import org.apache.carbondata.events.{BuildDataMapPostExecutionEvent, BuildDataMapPreExecutionEvent, OperationContext, OperationListenerBus}
 import org.apache.carbondata.hadoop.{CarbonInputSplit, CarbonMultiBlockSplit, CarbonProjection, CarbonRecordReader}
 import org.apache.carbondata.hadoop.api.{CarbonInputFormat, CarbonTableInputFormat}
@@ -218,7 +218,7 @@ class RawBytesReadSupport(segmentProperties: SegmentProperties, indexColumns: Ar
           var dataFromBytes = DataTypeUtil
             .getDataBasedOnDataTypeForNoDictionaryColumn(bytes, col.getDataType)
           if (dataFromBytes == null) {
-            dataFromBytes = DataConvertUtil
+            dataFromBytes = BloomFilterUtil
               .getNullValueForMeasure(col.getDataType, col.getColumnSchema.getScale)
           }
           // for timestamp the above method will give the original data, so it should be
@@ -234,7 +234,7 @@ class RawBytesReadSupport(segmentProperties: SegmentProperties, indexColumns: Ar
         // measures start from 1
         val value = data(1 + indexCol2IdxInMeasureArray(col.getColName))
         if (null == value) {
-          DataConvertUtil.getNullValueForMeasure(col.getDataType,
+          BloomFilterUtil.getNullValueForMeasure(col.getDataType,
             col.getColumnSchema.getScale)
         } else if (DataTypes.isDecimal(col.getDataType)) {
           // In rebuild process, value is built for spark
