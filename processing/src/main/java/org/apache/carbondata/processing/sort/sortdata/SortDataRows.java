@@ -79,10 +79,6 @@ public class SortDataRows {
     // size of list will be sort buffer size + 1 to avoid creation of new
     // array in list array
     this.recordHolderList = new Object[sortBufferSize][];
-    // Delete if any older file exists in sort temp folder
-    CarbonDataProcessorUtil.deleteSortLocationIfExists(parameters.getTempFileLocation());
-    // create new sort temp directory
-    CarbonDataProcessorUtil.createLocations(parameters.getTempFileLocation());
   }
 
   public void addRow(Object[] row) throws CarbonSortKeyAndGroupByException {
