@@ -40,6 +40,7 @@ import org.apache.carbondata.processing.loading.sort.unsafe.merger.UnsafeInterme
 import org.apache.carbondata.processing.loading.sort.unsafe.merger.UnsafeSingleThreadFinalSortFilesMerger;
 import org.apache.carbondata.processing.sort.exception.CarbonSortKeyAndGroupByException;
 import org.apache.carbondata.processing.sort.sortdata.SortParameters;
+import org.apache.carbondata.processing.util.CarbonDataProcessorUtil;
 
 import org.apache.log4j.Logger;
 
@@ -74,6 +75,10 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
 
     finalMerger = new UnsafeSingleThreadFinalSortFilesMerger(sortParameters,
         sortParameters.getTempFileLocation());
+    // Delete if any older file exists in sort temp folder
+    CarbonDataProcessorUtil.deleteSortLocationIfExists(sortParameters.getTempFileLocation());
+    // create new sort temp directory
+    CarbonDataProcessorUtil.createLocations(sortParameters.getTempFileLocation());
   }
 
   @Override
@@ -82,7 +87,7 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
     int inMemoryChunkSizeInMB = CarbonProperties.getInstance().getSortMemoryChunkSizeInMB();
     UnsafeSortDataRows[] sortDataRows = new UnsafeSortDataRows[iterators.length];
     final int batchSize = CarbonProperties.getInstance().getBatchSize();
-    this.executorService = Executors.newFixedThreadPool(iterators.length,
+    this.executorService = Executors.newFixedThreadPool(sortParameters.getNumberOfCores(),
         new CarbonThreadFactory("UnsafeParallelSorterPool:" + sortParameters.getTableName(),
                 true));
     this.threadStatusObserver = new ThreadStatusObserver(executorService);
@@ -91,7 +96,6 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
       for (int i = 0; i < iterators.length; i++) {
         sortDataRows[i] = new UnsafeSortDataRows(
                 sortParameters, unsafeIntermediateFileMerger, inMemoryChunkSizeInMB);
-        sortDataRows[i].initialize();
         executorService.execute(new SortIteratorThread(iterators[i], sortDataRows[i],
                 batchSize, rowCounter, this.threadStatusObserver));
       }
@@ -198,6 +202,7 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
     @Override
     public void run() {
       try {
+        sortDataRows.initialize();
         while (iterator.hasNext()) {
           CarbonRowBatch batch = iterator.next();
           int i = 0;
