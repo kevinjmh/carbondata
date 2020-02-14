@@ -117,6 +117,7 @@ public class CarbonFactDataWriterImplV3 extends AbstractFactDataWriter {
       convertFileMeta.putToExtra_info(CarbonCommonConstants.CARBON_WRITTEN_BY_FOOTER_INFO, appName);
       convertFileMeta.putToExtra_info(CarbonCommonConstants.CARBON_WRITTEN_VERSION,
           CarbonVersionConstants.CARBONDATA_VERSION);
+      convertFileMeta.setBlockBloomFilter(bloomFilterGenerator.endBlock());
       // write the footer
       byte[] byteArray = CarbonUtil.getByteArray(convertFileMeta);
       ByteBuffer buffer =
@@ -184,6 +185,7 @@ public class CarbonFactDataWriterImplV3 extends AbstractFactDataWriter {
 
   private void addPageData(TablePage tablePage) throws IOException {
     blockletDataHolder.addPage(tablePage);
+    bloomFilterGenerator.addPage(tablePage);
     if (listener != null &&
         model.getDatabaseName().equalsIgnoreCase(listener.getTblIdentifier().getDatabaseName()) &&
         model.getTableName().equalsIgnoreCase(listener.getTblIdentifier().getTableName())) {
@@ -339,6 +341,7 @@ public class CarbonFactDataWriterImplV3 extends AbstractFactDataWriter {
       rowList.add(rows);
     }
     blockletInfo3.setRow_count_in_page(rowList);
+    blockletInfo3.setBlockletBloomFilter(bloomFilterGenerator.endBlocklet());
     blockletMetadata.add(blockletInfo3);
   }
 
