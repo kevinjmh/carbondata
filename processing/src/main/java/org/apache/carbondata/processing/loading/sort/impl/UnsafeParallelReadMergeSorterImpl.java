@@ -85,7 +85,6 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
   public Iterator<CarbonRowBatch>[] sort(Iterator<CarbonRowBatch>[] iterators)
       throws CarbonDataLoadingException {
     int inMemoryChunkSizeInMB = CarbonProperties.getInstance().getSortMemoryChunkSizeInMB();
-    UnsafeSortDataRows[] sortDataRows = new UnsafeSortDataRows[iterators.length];
     final int batchSize = CarbonProperties.getInstance().getBatchSize();
     this.executorService = Executors.newFixedThreadPool(sortParameters.getNumberOfCores(),
         new CarbonThreadFactory("UnsafeParallelSorterPool:" + sortParameters.getTableName(),
@@ -94,15 +93,19 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
 
     try {
       for (int i = 0; i < iterators.length; i++) {
-        sortDataRows[i] = new UnsafeSortDataRows(
+        UnsafeSortDataRows sortDataRows = new UnsafeSortDataRows(
                 sortParameters, unsafeIntermediateFileMerger, inMemoryChunkSizeInMB);
-        executorService.execute(new SortIteratorThread(iterators[i], sortDataRows[i],
+        executorService.execute(new SortIteratorThread(iterators[i], sortDataRows,
                 batchSize, rowCounter, this.threadStatusObserver));
       }
       executorService.shutdown();
       executorService.awaitTermination(2, TimeUnit.DAYS);
       if (!sortParameters.getObserver().isFailed()) {
-        processRowToNextStep(sortDataRows, sortParameters);
+        LOGGER.info("Record Processed For table: " + sortParameters.getTableName());
+        CarbonTimeStatisticsFactory.getLoadStatisticsInstance().recordSortRowsStepTotalTime(
+            sortParameters.getPartitionID(), System.currentTimeMillis());
+        CarbonTimeStatisticsFactory.getLoadStatisticsInstance().recordDictionaryValuesTotalTime(
+            sortParameters.getPartitionID(), System.currentTimeMillis());
       }
     } catch (Exception e) {
       checkError();
@@ -152,29 +155,6 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
   }
 
   /**
-   * Below method will be used to process data to next step
-   */
-  private boolean processRowToNextStep(UnsafeSortDataRows[] sortDataRows, SortParameters parameters)
-      throws CarbonDataLoadingException {
-    try {
-      for (int i = 0; i < sortDataRows.length; i++) {
-        // start sorting
-        sortDataRows[i].startSorting();
-      }
-
-      // check any more rows are present
-      LOGGER.info("Record Processed For table: " + parameters.getTableName());
-      CarbonTimeStatisticsFactory.getLoadStatisticsInstance()
-          .recordSortRowsStepTotalTime(parameters.getPartitionID(), System.currentTimeMillis());
-      CarbonTimeStatisticsFactory.getLoadStatisticsInstance()
-          .recordDictionaryValuesTotalTime(parameters.getPartitionID(), System.currentTimeMillis());
-      return false;
-    } catch (Exception e) {
-      throw new CarbonDataLoadingException(e);
-    }
-  }
-
-  /**
    * This thread iterates the iterator and adds the rows
    */
   private static class SortIteratorThread implements Runnable {
@@ -217,6 +197,7 @@ public class UnsafeParallelReadMergeSorterImpl extends AbstractMergeSorter {
             rowCounter.getAndAdd(i);
           }
         }
+        sortDataRows.startSorting();
       } catch (Exception e) {
         LOGGER.error(e.getMessage(), e);
         this.threadStatusObserver.notifyFailed(e);
