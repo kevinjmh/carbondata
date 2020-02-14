@@ -434,6 +434,10 @@ public class CarbonMetadataUtil {
       }
       blockletInfo3.setRow_count_in_page(rowsPerPage);
     }
+    if (null != blockletInfo.getBlockletBloomBuffers()) {
+      blockletInfo3.setBlockletBloomFilter(blockletInfo.getBlockletBloomBuffers());
+    }
+
     return blockletInfo3;
   }
 
