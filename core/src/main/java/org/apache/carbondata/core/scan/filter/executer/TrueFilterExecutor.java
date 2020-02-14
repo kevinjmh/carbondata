@@ -18,7 +18,9 @@
 package org.apache.carbondata.core.scan.filter.executer;
 
 import java.util.BitSet;
+import java.util.Map;
 
+import org.apache.carbondata.core.bloom.RoaringBloomFilter;
 import org.apache.carbondata.core.scan.filter.intf.RowIntf;
 import org.apache.carbondata.core.scan.processor.RawBlockletColumnChunks;
 import org.apache.carbondata.core.util.BitSetGroup;
@@ -77,5 +79,10 @@ public class TrueFilterExecutor implements FilterExecuter {
    */
   public void readColumnChunks(RawBlockletColumnChunks rawBlockletColumnChunks) {
     // do nothing
+  }
+
+  @Override
+  public boolean isScanRequired(Map<Integer, RoaringBloomFilter> blockletBloomfilters) {
+    return true;
   }
 }
