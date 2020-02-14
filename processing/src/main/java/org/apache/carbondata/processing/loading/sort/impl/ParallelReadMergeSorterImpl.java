@@ -91,9 +91,9 @@ public class ParallelReadMergeSorterImpl extends AbstractMergeSorter {
   @Override
   public Iterator<CarbonRowBatch>[] sort(Iterator<CarbonRowBatch>[] iterators)
       throws CarbonDataLoadingException {
-    SortDataRows[] sortDataRows = new SortDataRows[sortParameters.getNumberOfCores()];
+    SortDataRows[] sortDataRows = new SortDataRows[iterators.length];
     final int batchSize = CarbonProperties.getInstance().getBatchSize();
-    this.executorService = Executors.newFixedThreadPool(iterators.length,
+    this.executorService = Executors.newFixedThreadPool(sortParameters.getNumberOfCores(),
         new CarbonThreadFactory("SafeParallelSorterPool:" + sortParameters.getTableName(),
                 true));
     this.threadStatusObserver = new ThreadStatusObserver(executorService);
