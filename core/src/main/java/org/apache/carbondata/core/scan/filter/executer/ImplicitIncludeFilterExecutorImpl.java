@@ -18,8 +18,10 @@
 package org.apache.carbondata.core.scan.filter.executer;
 
 import java.util.BitSet;
+import java.util.Map;
 import java.util.Set;
 
+import org.apache.carbondata.core.bloom.RoaringBloomFilter;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.scan.filter.intf.RowIntf;
 import org.apache.carbondata.core.scan.filter.resolver.resolverinfo.DimColumnResolvedFilterInfo;
@@ -70,6 +72,11 @@ public class ImplicitIncludeFilterExecutorImpl
   public BitSet isScanRequired(byte[][] blockMaxValue, byte[][] blockMinValue,
       boolean[] isMinMaxSet) {
     return null;
+  }
+
+  @Override
+  public boolean isScanRequired(Map<Integer, RoaringBloomFilter> blockletBloomfilters) {
+    return true;
   }
 
   @Override

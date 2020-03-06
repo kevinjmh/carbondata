@@ -17,9 +17,15 @@
 
 package org.apache.carbondata.core.indexstore.blockletindex;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.carbondata.core.bloom.RoaringBloomFilter;
 import org.apache.carbondata.core.constants.CarbonV3DataFormatConstants;
 import org.apache.carbondata.core.datamap.dev.BlockletSerializer;
 import org.apache.carbondata.core.datamap.dev.fgdatamap.FineGrainBlocklet;
@@ -119,6 +125,27 @@ public class BlockletDataRefNode implements DataRefNode {
       return blockletIndex.getMinMaxIndex().getMinValues();
     }
     return null;
+  }
+
+  @Override
+  public Map<Integer, RoaringBloomFilter> getColumnsBloomFilter() {
+    Map<Integer, ByteBuffer> bloomBuffers =
+            blockInfos.get(index).getDetailInfo().getBlockletInfo().getBlockletBloomBuffers();
+    if (null == bloomBuffers) {
+      return null;
+    }
+    Map<Integer, RoaringBloomFilter> blockletBloomfilters = new HashMap<>(bloomBuffers.size());
+    for (Map.Entry<Integer, ByteBuffer> pair : bloomBuffers.entrySet()) {
+      DataInputStream dis = new DataInputStream(new ByteArrayInputStream(pair.getValue().array()));
+      RoaringBloomFilter bf = new RoaringBloomFilter();
+      try {
+        bf.readFields(dis);
+        blockletBloomfilters.put(pair.getKey(), bf);
+      } catch (IOException e) {
+        // any exception can be taken as no bloom filter is generated
+      }
+    }
+    return blockletBloomfilters;
   }
 
   @Override

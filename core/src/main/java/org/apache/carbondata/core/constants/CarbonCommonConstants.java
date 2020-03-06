@@ -223,6 +223,29 @@ public final class CarbonCommonConstants {
   public static final String LOCAL_DICTIONARY_DECODER_BASED_FALLBACK_DEFAULT = "true";
 
   /**
+   * table properties for block/blocklet level bloom filter to specify which columns needs to build
+   */
+  public static final String BLOOM_INCLUDE = "bloom_include";
+
+  /**
+   * default value of blocklet bloom's false positive probability parameter
+   */
+  public static final double DEFAULT_BLOCKLET_BLOOM_FPP = 0.001;
+
+  /**
+   * default value of block bloom's false positive probability parameter
+   */
+  public static final double DEFAULT_BLOCK_BLOOM_FPP = 0.01;
+
+  /**
+   * property to enable bloom during filter query
+   */
+  @CarbonProperty
+  public static final String ENABLED_BLOOM_BLOCKLET = "carbon.enable.bloom.blocklet";
+
+  public static final String ENABLED_BLOOM_BLOCKLET_DEFAULT = "true";
+
+  /**
    * zookeeper url key
    */
   @CarbonProperty

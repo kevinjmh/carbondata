@@ -164,6 +164,10 @@ private[sql] case class CarbonDescribeFormattedCommand(
     if (carbonTable.getGlobalSortPartitions != null) {
       results ++= Seq(("GLOBAL SORT PARTITIONS", carbonTable.getGlobalSortPartitions, ""))
     }
+    if (tblProps.contains(CarbonCommonConstants.BLOOM_INCLUDE)) {
+      results ++= Seq(("Bloom Include",
+        tblProps.getOrElse(CarbonCommonConstants.BLOOM_INCLUDE, ""), ""))
+    }
     //////////////////////////////////////////////////////////////////////////////
     //  Encoding Information
     //////////////////////////////////////////////////////////////////////////////

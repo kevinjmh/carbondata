@@ -56,6 +56,7 @@ import org.apache.carbondata.format.BlockletInfo3;
 import org.apache.carbondata.format.IndexHeader;
 import org.apache.carbondata.processing.datamap.IndexWriterListener;
 import org.apache.carbondata.processing.store.CarbonFactDataHandlerModel;
+import org.apache.carbondata.processing.store.writer.v3.BloomFilterGenerator;
 
 import static org.apache.carbondata.core.constants.SortScopeOptions.SortScope.NO_SORT;
 
@@ -152,6 +153,8 @@ public abstract class AbstractFactDataWriter implements CarbonFactDataWriter {
 
   private OutputFilesInfoHolder outputFilesInfoHolder;
 
+  protected BloomFilterGenerator bloomFilterGenerator;
+
   public AbstractFactDataWriter(CarbonFactDataHandlerModel model) {
     this.model = model;
     blockIndexInfoList = new ArrayList<>();
@@ -203,6 +206,7 @@ public abstract class AbstractFactDataWriter implements CarbonFactDataWriter {
               true));
     }
     this.outputFilesInfoHolder = this.model.getOutputFilesInfoHolder();
+    this.bloomFilterGenerator = new BloomFilterGenerator(model);
   }
 
   /**

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.carbondata.common.annotations.InterfaceAudience;
+import org.apache.carbondata.core.bloom.BloomFilterUtil;
 import org.apache.carbondata.core.datamap.Segment;
 import org.apache.carbondata.core.datastore.block.SegmentProperties;
 import org.apache.carbondata.core.metadata.datatype.DataTypes;
@@ -49,12 +50,12 @@ public class BloomIndexWriter extends AbstractBloomIndexWriter {
 
   protected byte[] convertNonDictionaryValue(int indexColIdx, Object value) {
     if (DataTypes.VARCHAR == indexColumns.get(indexColIdx).getDataType()) {
-      return DataConvertUtil.getRawBytesForVarchar((byte[]) value);
+      return BloomFilterUtil.getRawBytesForVarchar((byte[]) value);
     } else if (DataTypeUtil.isPrimitiveColumn(indexColumns.get(indexColIdx).getDataType())) {
       // get bytes for the original value of the no dictionary column
       return CarbonUtil.getValueAsBytes(indexColumns.get(indexColIdx).getDataType(), value);
     } else {
-      return DataConvertUtil.getRawBytes((byte[]) value);
+      return BloomFilterUtil.getRawBytes((byte[]) value);
     }
   }
 

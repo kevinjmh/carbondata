@@ -238,6 +238,11 @@ object CarbonParserUtil {
     // column properties
     val colProps = extractColumnProperties(fields, tableProperties)
 
+    // validata the blocklet level bloom property if defined
+    if (tableProperties.get(CarbonCommonConstants.BLOOM_INCLUDE).isDefined) {
+      validateBloomColumns(fields, tableProperties)
+    }
+
     // validate the local dictionary property if defined
     if (tableProperties.get(CarbonCommonConstants.LOCAL_DICTIONARY_ENABLE).isDefined) {
       if (!CarbonScalaUtil
@@ -422,6 +427,33 @@ object CarbonParserUtil {
       bucketFields: Option[BucketFields],
       getPartitionInfo(partitionCols),
       tableComment)
+  }
+
+  def validateBloomColumns(fields: Seq[Field], tableProperties: Map[String, String]): Unit = {
+    val pageBloomFields = tableProperties(CarbonCommonConstants.BLOOM_INCLUDE)
+      .split(",").map(_.trim.toLowerCase)
+    if (pageBloomFields.length != pageBloomFields.distinct.length) {
+      throw new MalformedCarbonCommandException(
+        CarbonCommonConstants.BLOOM_INCLUDE.toUpperCase() + " have duplicate columns")
+    }
+    pageBloomFields.foreach { column =>
+      val bloomFiled = fields.find(_.column.equalsIgnoreCase(column))
+      if (bloomFiled.isDefined) {
+        // check if data type is supported
+        val datatypeStr = bloomFiled.get.dataType.getOrElse("");
+        val supportedType =
+          Array("string", "int", "bigint", "boolean", "smallint", "double", "float", "decimal")
+        if (!supportedType.exists(_.equalsIgnoreCase(datatypeStr))) {
+          val errorMsg = datatypeStr.toUpperCase +" data type is not supported in property " +
+            CarbonCommonConstants.BLOOM_INCLUDE.toUpperCase()
+          throw new MalformedCarbonCommandException(errorMsg)
+        }
+      } else {
+        val errorMsg = column + " set in property " +
+          CarbonCommonConstants.BLOOM_INCLUDE.toUpperCase() + " does not exist in table."
+        throw new MalformedCarbonCommandException(errorMsg)
+      }
+    }
   }
 
   /**

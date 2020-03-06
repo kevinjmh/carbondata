@@ -20,7 +20,9 @@ package org.apache.carbondata.core.scan.filter.executer;
 import java.nio.charset.Charset;
 import java.util.BitSet;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.carbondata.core.bloom.RoaringBloomFilter;
 import org.apache.carbondata.core.constants.CarbonCommonConstants;
 import org.apache.carbondata.core.keygenerator.directdictionary.DirectDictionaryGenerator;
 import org.apache.carbondata.core.keygenerator.directdictionary.DirectDictionaryKeyGeneratorFactory;
@@ -110,6 +112,11 @@ public abstract class RestructureEvaluatorImpl implements FilterExecuter {
   public BitSet prunePages(RawBlockletColumnChunks rawBlockletColumnChunks)
       throws FilterUnsupportedException {
     throw new FilterUnsupportedException("Unsupported RestructureEvaluatorImpl on pune pages");
+  }
+
+  @Override
+  public boolean isScanRequired(Map<Integer, RoaringBloomFilter> blockletBloomfilters) {
+    return true;
   }
 
   /**

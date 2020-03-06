@@ -19,7 +19,9 @@ package org.apache.carbondata.core.scan.filter.executer;
 
 import java.io.IOException;
 import java.util.BitSet;
+import java.util.Map;
 
+import org.apache.carbondata.core.bloom.RoaringBloomFilter;
 import org.apache.carbondata.core.scan.expression.exception.FilterUnsupportedException;
 import org.apache.carbondata.core.scan.filter.intf.RowIntf;
 import org.apache.carbondata.core.scan.processor.RawBlockletColumnChunks;
@@ -92,6 +94,12 @@ public class AndFilterExecuterImpl implements FilterExecuter, ImplicitColumnFilt
   public void readColumnChunks(RawBlockletColumnChunks rawBlockletColumnChunks) throws IOException {
     leftExecuter.readColumnChunks(rawBlockletColumnChunks);
     rightExecuter.readColumnChunks(rawBlockletColumnChunks);
+  }
+
+  @Override
+  public boolean isScanRequired(Map<Integer, RoaringBloomFilter> blockletBloomfilters) {
+    return leftExecuter.isScanRequired(blockletBloomfilters) &&
+            rightExecuter.isScanRequired(blockletBloomfilters);
   }
 
   @Override
