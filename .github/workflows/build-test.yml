@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        spark-profile: [ 'spark-2.3','spark-2.4','spark-3.1' ]
+        spark-profile: [ 'spark-3.1' ]
     name: Build with spark-version ${{ matrix.spark-profile }}
 
     steps:
