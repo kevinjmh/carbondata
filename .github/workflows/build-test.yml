@@ -47,3 +47,6 @@ jobs:
       - name: install
         run: |
           mvn clean install -DskipTests -Pbuild-with-format -P${{ matrix.spark-profile }}
+      - name: test
+        run: |
+          mvn package -Pbuild-with-format -P${{ matrix.spark-profile }}
