@@ -24,7 +24,7 @@ import org.apache.avro.Schema
 import org.apache.avro.Schema.Type
 import org.apache.avro.generic.GenericRecord
 import org.apache.spark.sql.{CarbonEnv, Row, SparkSession}
-import org.apache.spark.sql.avro.{AvroDeserializer, SchemaConverters}
+import org.apache.spark.sql.avro.{AvroDeserializerWrapper, SchemaConverters}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
@@ -174,7 +174,8 @@ abstract class Source {
             }
             val record = iterator.next()
             val avroWriteSchema = record.getSchema
-            var sparkAvroDeserializer = new AvroDeserializer(avroWriteSchema, sparkDataTypes)
+            var sparkAvroDeserializer = AvroDeserializerWrapper
+              .create(avroWriteSchema, sparkDataTypes)
             val internalRow = sparkAvroDeserializer.deserialize(record).asInstanceOf[InternalRow]
             // update with the default values if the value is null
             if (avroWriteSchema.getFields.size() != sparkDataTypes.fields.length) {
